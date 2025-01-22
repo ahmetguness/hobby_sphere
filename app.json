@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "hobby_sphere",
+    "slug": "hobby_sphere",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/default/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/default/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/default/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./src/assets/default/favicon.png"
+    }
+  }
+}
