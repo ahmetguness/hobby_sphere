@@ -1,15 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-
-interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-}
+import { FirebaseConfig } from "../../models/FirebaseConfig";
 
 const firebaseConfig: FirebaseConfig = {
   apiKey: process.env.API_KEY,
