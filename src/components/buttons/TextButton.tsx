@@ -3,11 +3,12 @@ import React from "react";
 
 interface TextButtonProps {
   label: string;
+  onPress: () => void;
 }
 
-const TextButton: React.FC<TextButtonProps> = ({ label }) => {
+const TextButton: React.FC<TextButtonProps> = ({ label, onPress }) => {
   return (
-    <TouchableOpacity>
+    <TouchableOpacity onPress={onPress}>
       <Text>{label}</Text>
     </TouchableOpacity>
   );

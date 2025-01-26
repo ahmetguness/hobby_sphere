@@ -1,17 +1,21 @@
-import { View, Text, TextInput, TextInputProps, Alert } from "react-native";
 import React, { useState } from "react";
+import { View, Text, TextInput, TextInputProps, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { GRADIENTCOLORS } from "../../theme/colors";
+import { useNavigation } from "@react-navigation/native";
+import { useDispatch } from "react-redux";
 import { styles } from "./styles";
+import { GRADIENTCOLORS } from "../../theme/colors";
 import TR from "../../locales/tr.json";
-import EN from "../../locales/en.json";
 import GradientTextButton from "../../components/buttons/GradientTextButton";
 import TextButton from "../../components/buttons/TextButton";
-import { users } from "../../data/dummy_data";
-import { useNavigation } from "@react-navigation/native";
-import { HomeScreenNavigationProp } from "../../types/NavigationTypes";
-import { useDispatch } from "react-redux";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
+import { AppDispatch } from "../../hooks/redux/store";
+import { HomeScreenNavigationProp } from "../../types/NavigationTypes";
+import {
+  createUser,
+  validateUserCredentials,
+} from "../../services/firebase/firebaseServices";
+
 interface TextInputContainerProps extends TextInputProps {
   label: string;
 }
@@ -19,34 +23,73 @@ interface TextInputContainerProps extends TextInputProps {
 const TextInputContainer: React.FC<TextInputContainerProps> = ({
   label,
   ...props
-}) => {
-  return (
-    <View style={styles.textInputContainer}>
-      <Text>{label}</Text>
-      <TextInput style={styles.textInput} {...props} />
-    </View>
-  );
-};
+}) => (
+  <View style={styles.textInputContainer}>
+    <Text>{label}</Text>
+    <TextInput style={styles.textInput} {...props} />
+  </View>
+);
 
-const LoginScreen = () => {
+const LoginScreen: React.FC = () => {
   const LAN = TR;
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const dispatcher = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleLogin = () => {
-    const user = users.find(
-      (user) => user.email === email && user.password === password
-    );
-    if (user) {
-      dispatcher(setUserInfo(user));
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetForm = () => {
+    setFormData({ name: "", email: "", password: "" });
+  };
+
+  const handleLogin = async () => {
+    const { email, password } = formData;
+    const result = await validateUserCredentials(email, password);
+    if (result.success) {
+      if (result.user) {
+        dispatch(setUserInfo(result.user));
+      } else {
+        Alert.alert("Login Failed", "User information is missing.");
+      }
       navigation.navigate("HomeScreen");
     } else {
-      Alert.alert("Login Failed", "Invalid email or password");
+      console.log("hata");
     }
-    setEmail("");
-    setPassword("");
+
+    resetForm();
+  };
+
+  const handleRegister = async () => {
+    try {
+      const email = formData.email;
+      const password = formData.password;
+      const name = formData.name;
+
+      const response = await createUser(email, password, name);
+
+      if (response.success) {
+        if (response.user) {
+          dispatch(setUserInfo(response.user));
+          navigation.navigate("HomeScreen");
+        } else {
+          Alert.alert("Registration Failed", "User information is missing.");
+        }
+        setIsRegisterMode(false);
+        resetForm();
+      } else {
+        alert(response.message);
+      }
+    } catch (error) {
+      console.error("Registration failed:", error);
+      alert("Kayıt işlemi sırasında bir hata oluştu.");
+    }
   };
 
   return (
@@ -59,23 +102,57 @@ const LoginScreen = () => {
       <View style={styles.upperContainer}>
         <Text style={styles.appNameText}>{LAN.appName}</Text>
       </View>
+
       <View style={styles.bottomContainer}>
-        <TextInputContainer
-          label="E Mail"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInputContainer
-          label="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        <GradientTextButton label="Log In" onPress={handleLogin} />
-        <View style={styles.buttonContainer}>
-          <TextButton label="Register" />
-          <TextButton label="Forgot Password" />
-        </View>
+        {isRegisterMode ? (
+          <>
+            <TextInputContainer
+              label="Name"
+              value={formData.name}
+              onChangeText={(value) => handleInputChange("name", value)}
+            />
+            <TextInputContainer
+              label="E-Mail"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange("email", value)}
+            />
+            <TextInputContainer
+              label="Password"
+              secureTextEntry
+              value={formData.password}
+              onChangeText={(value) => handleInputChange("password", value)}
+            />
+            <GradientTextButton label="Register" onPress={handleRegister} />
+          </>
+        ) : (
+          <>
+            <TextInputContainer
+              label="E-Mail"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange("email", value)}
+            />
+            <TextInputContainer
+              label="Password"
+              secureTextEntry
+              value={formData.password}
+              onChangeText={(value) => handleInputChange("password", value)}
+            />
+            <GradientTextButton label="Log In" onPress={handleLogin} />
+            <View style={styles.buttonContainer}>
+              <TextButton
+                label="Register"
+                onPress={() => {
+                  setIsRegisterMode(true);
+                  resetForm();
+                }}
+              />
+              <TextButton
+                label="Forgot Password"
+                onPress={() => console.log("Forgot Password pressed")}
+              />
+            </View>
+          </>
+        )}
       </View>
     </LinearGradient>
   );
