@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TextInputProps, Alert } from "react-native";
+import { View, Text, Alert, TextInput, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { styles } from "./styles";
-import { GRADIENTCOLORS } from "../../theme/colors";
+import { COLORS, GRADIENTCOLORS } from "../../theme/colors";
 import TR from "../../locales/tr.json";
 import GradientTextButton from "../../components/buttons/GradientTextButton";
 import TextButton from "../../components/buttons/TextButton";
@@ -15,31 +15,39 @@ import {
   createUser,
   validateUserCredentials,
 } from "../../services/firebase/firebaseServices";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import Checkbox from "expo-checkbox";
 
-interface TextInputContainerProps extends TextInputProps {
+interface TextInputContainerProps {
   label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  secureTextEntry?: boolean;
 }
 
 const TextInputContainer: React.FC<TextInputContainerProps> = ({
   label,
-  ...props
+  value,
+  onChangeText,
+  secureTextEntry,
 }) => (
   <View style={styles.textInputContainer}>
     <Text>{label}</Text>
-    <TextInput style={styles.textInput} {...props} />
+    <TextInput
+      style={styles.textInput}
+      value={value}
+      onChangeText={onChangeText}
+      secureTextEntry={secureTextEntry}
+    />
   </View>
 );
 
-const LoginScreen: React.FC = () => {
-  const LAN = TR;
+const useForm = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const navigation = useNavigation<HomeScreenNavigationProp>();
-  const dispatch = useDispatch<AppDispatch>();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -49,18 +57,26 @@ const LoginScreen: React.FC = () => {
     setFormData({ name: "", email: "", password: "" });
   };
 
+  return { formData, handleInputChange, resetForm };
+};
+
+const LoginScreen: React.FC = () => {
+  const LAN = TR;
+  const { formData, handleInputChange, resetForm } = useForm();
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isChecked, setChecked] = useState(false);
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const dispatch = useDispatch<AppDispatch>();
+
   const handleLogin = async () => {
     const { email, password } = formData;
     const result = await validateUserCredentials(email, password);
-    if (result.success) {
-      if (result.user) {
-        dispatch(setUserInfo(result.user));
-      } else {
-        Alert.alert("Login Failed", "User information is missing.");
-      }
+
+    if (result.success && result.user) {
+      dispatch(setUserInfo(result.user));
       navigation.navigate("HomeScreen");
     } else {
-      console.log("hata");
+      Alert.alert("Login Failed", "User information is missing.");
     }
 
     resetForm();
@@ -68,28 +84,22 @@ const LoginScreen: React.FC = () => {
 
   const handleRegister = async () => {
     try {
-      const email = formData.email;
-      const password = formData.password;
-      const name = formData.name;
+      const { email, password, name } = formData;
+      const result = await createUser(email, password, name);
 
-      const response = await createUser(email, password, name);
-
-      if (response.success) {
-        if (response.user) {
-          dispatch(setUserInfo(response.user));
-          navigation.navigate("HomeScreen");
-        } else {
-          Alert.alert("Registration Failed", "User information is missing.");
-        }
+      if (result.success && result.user) {
+        dispatch(setUserInfo(result.user));
+        navigation.navigate("HomeScreen");
         setIsRegisterMode(false);
-        resetForm();
       } else {
-        alert(response.message);
+        alert(result.message);
       }
     } catch (error) {
       console.error("Registration failed:", error);
       alert("Kayıt işlemi sırasında bir hata oluştu.");
     }
+
+    resetForm();
   };
 
   return (
@@ -100,6 +110,14 @@ const LoginScreen: React.FC = () => {
       end={{ x: 1, y: 0 }}
     >
       <View style={styles.upperContainer}>
+        {isRegisterMode ? (
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={() => setIsRegisterMode(false)}
+          >
+            <Ionicons name="chevron-back" size={26} color={COLORS.black} />
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.appNameText}>{LAN.appName}</Text>
       </View>
 
@@ -118,8 +136,8 @@ const LoginScreen: React.FC = () => {
             />
             <TextInputContainer
               label="Password"
-              secureTextEntry
               value={formData.password}
+              secureTextEntry
               onChangeText={(value) => handleInputChange("password", value)}
             />
             <GradientTextButton label="Register" onPress={handleRegister} />
@@ -133,18 +151,29 @@ const LoginScreen: React.FC = () => {
             />
             <TextInputContainer
               label="Password"
-              secureTextEntry
               value={formData.password}
+              secureTextEntry
               onChangeText={(value) => handleInputChange("password", value)}
             />
-            <GradientTextButton label="Log In" onPress={handleLogin} />
+            <View style={{ width: "100%" }}>
+              <GradientTextButton label="Log In" onPress={handleLogin} />
+              <View
+                style={{
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: "4%",
+                  flexDirection: "row",
+                }}
+              >
+                <Checkbox value={isChecked} onValueChange={setChecked} />
+                <Text style={{ marginLeft: "2%" }}>Keep logged in</Text>
+              </View>
+            </View>
             <View style={styles.buttonContainer}>
               <TextButton
                 label="Register"
-                onPress={() => {
-                  setIsRegisterMode(true);
-                  resetForm();
-                }}
+                onPress={() => setIsRegisterMode(true)}
               />
               <TextButton
                 label="Forgot Password"

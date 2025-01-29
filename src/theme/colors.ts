@@ -8,6 +8,7 @@ export const COLORS: Record<string, string> = {
   softPink: "#FFB6C1", // Soft Pink (Zarif ve Davetkâr)
   lavender: "#9B59B6", // Lavender (Huzur Verici)
   white: "white",
+  black: "black",
 };
 
 export const GRADIENTCOLORS: readonly [string, string] = [

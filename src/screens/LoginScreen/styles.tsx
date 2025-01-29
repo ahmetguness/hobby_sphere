@@ -39,4 +39,9 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-evenly",
   },
+  iconContainer: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+  },
 });
