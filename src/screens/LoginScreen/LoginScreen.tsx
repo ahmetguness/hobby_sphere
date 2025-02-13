@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, Alert, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Alert,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
@@ -65,10 +72,12 @@ const LoginScreen: React.FC = () => {
   const { formData, handleInputChange, resetForm } = useForm();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isChecked, setChecked] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
 
   const handleLogin = async () => {
+    setIsLogged(true);
     const { email, password } = formData;
     const result = await validateUserCredentials(email, password);
 
@@ -78,11 +87,13 @@ const LoginScreen: React.FC = () => {
     } else {
       Alert.alert("Login Failed", "User information is missing.");
     }
-
     resetForm();
+    setIsLogged(false);
   };
 
   const handleRegister = async () => {
+    setIsLogged(true);
+
     try {
       const { email, password, name } = formData;
       const result = await createUser(email, password, name);
@@ -96,10 +107,11 @@ const LoginScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("Registration failed:", error);
-      alert("Kayıt işlemi sırasında bir hata oluştu.");
+      alert("An error occurred during the registration process.");
     }
 
     resetForm();
+    setIsLogged(false);
   };
 
   return (
@@ -140,7 +152,16 @@ const LoginScreen: React.FC = () => {
               secureTextEntry
               onChangeText={(value) => handleInputChange("password", value)}
             />
-            <GradientTextButton label="Register" onPress={handleRegister} />
+
+            {isLogged ? (
+              <ActivityIndicator
+                animating={isLogged}
+                size={32}
+                color={COLORS.primary}
+              />
+            ) : (
+              <GradientTextButton label="Register" onPress={handleRegister} />
+            )}
           </>
         ) : (
           <>
@@ -156,7 +177,15 @@ const LoginScreen: React.FC = () => {
               onChangeText={(value) => handleInputChange("password", value)}
             />
             <View style={{ width: "100%" }}>
-              <GradientTextButton label="Log In" onPress={handleLogin} />
+              {isLogged ? (
+                <ActivityIndicator
+                  animating={isLogged}
+                  size={32}
+                  color={COLORS.primary}
+                />
+              ) : (
+                <GradientTextButton label="Log In" onPress={handleLogin} />
+              )}
               <View
                 style={{
                   width: "100%",
