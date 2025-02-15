@@ -11,6 +11,7 @@ export const users: User[] = [
     email: "amo@gmail.com",
     password: "123",
     hobbies: ["Football", "Basketball", "Tennis"],
+    image: "",
   },
   {
     id: "asd",
@@ -19,6 +20,7 @@ export const users: User[] = [
     email: "123",
     password: "123",
     hobbies: ["Football", "Basketball", "Tennis"],
+    image: "",
   },
 ];
 export const hobbies: Hobby[] = [

@@ -12,6 +12,7 @@ const initialState: UserState = {
     email: "",
     password: "",
     hobbies: [],
+    image: "",
   },
 };
 

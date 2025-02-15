@@ -62,6 +62,7 @@ export const createUser = async (
       password,
       name,
       hobbies: [],
+      image: "",
     };
 
     await setDoc(doc(db, "users", userId), user);

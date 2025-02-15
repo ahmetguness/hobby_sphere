@@ -38,4 +38,41 @@ export const styles = StyleSheet.create({
     width: 40,
     borderRadius: 20,
   },
+  modalRootContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalInnerContainer: {
+    backgroundColor: "gray",
+    height: 200,
+    width: 200,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)", // Arkaplanı yarı saydam yapar
+  },
+  modalContent: {
+    width: 300,
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 5, // Android gölge efekti
+    shadowColor: "#000", // iOS gölge efekti
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: COLORS.text,
+  },
 });
