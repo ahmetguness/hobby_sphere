@@ -13,6 +13,9 @@ const initialState: UserState = {
     password: "",
     hobbies: [],
     image: "",
+    posts: [],
+    comments: [],
+    likes: [],
   },
 };
 

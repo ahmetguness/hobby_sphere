@@ -2,11 +2,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "./firebaseConfig";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { auth, db, storage } from "./firebaseConfig";
 import { FirebaseError } from "firebase/app";
 import { User } from "../../models/User";
 import { dbActionResponse } from "../../models/ServiceModels";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const getErrorMessage = (error: unknown): string => {
   let errorMessage = "An error occurred. Please try again later.";
@@ -63,6 +64,9 @@ export const createUser = async (
       name,
       hobbies: [],
       image: "",
+      posts: [],
+      comments: [],
+      likes: [],
     };
 
     await setDoc(doc(db, "users", userId), user);
@@ -114,5 +118,32 @@ export const validateUserCredentials = async (
     }
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const uploadProfileImage = async (
+  userId: string,
+  uri: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const imageRef = ref(storage, `users/${userId}.jpg`);
+
+    await uploadBytes(imageRef, blob);
+    const downloadURL = await getDownloadURL(imageRef);
+    return downloadURL;
+  } catch (error) {
+    console.error("Image upload failed:", error);
+    return null;
+  }
+};
+
+export const updateUserImage = async (userId: string, imageUrl: string) => {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, { image: imageUrl });
+  } catch (error) {
+    console.error("Failed to update user image:", error);
   }
 };

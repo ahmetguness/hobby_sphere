@@ -5,4 +5,7 @@ export interface User {
   name: string;
   hobbies: {}[];
   image: string;
+  posts: {}[];
+  comments: {}[];
+  likes: {}[];
 }

@@ -9,7 +9,7 @@ import {
   Modal,
   Button,
 } from "react-native";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
 import { styles } from "./styles";
 import { hobbies } from "../../data/dummy_data";
@@ -19,30 +19,50 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { COLORS } from "../../theme/colors";
 import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
+import {
+  updateUserImage,
+  uploadProfileImage,
+} from "../../services/firebase/firebaseServices";
 
 const HomeScreen = () => {
   const [searchText, setSearchText] = useState<string>("");
   const [selectedHobby, setSelectedHobby] = useState<string>("default");
   const user = useSelector((state: RootState) => state.user.userInfo);
-
+  const dispatch = useDispatch();
   const [isModalVisible, setModalVisible] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string | null>(
+    user.image || require("../../assets/avatars/default_avatar.png")
+  );
+  console.log(user);
 
   const handleAvatarPress = () => {
     setModalVisible(true);
   };
 
+  const handleImageSelection = async (
+    result: ImagePicker.ImagePickerResult
+  ) => {
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri;
+      setAvatar(imageUri);
+      setModalVisible(false);
+
+      if (user?.id) {
+        const uploadedImageUrl = await uploadProfileImage(user.id, imageUri);
+        if (uploadedImageUrl) {
+          await updateUserImage(user.id, uploadedImageUrl);
+        }
+      }
+    }
+  };
+
   const pickImageFromGallery = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });
-
-    if (!result.canceled) {
-      setAvatar(result.assets[0].uri);
-      setModalVisible(false);
-    }
+    await handleImageSelection(result);
   };
 
   const takePhotoWithCamera = async () => {
@@ -50,11 +70,7 @@ const HomeScreen = () => {
       allowsEditing: true,
       quality: 1,
     });
-
-    if (!result.canceled) {
-      setAvatar(result.assets[0].uri);
-      setModalVisible(false);
-    }
+    await handleImageSelection(result);
   };
 
   return (
@@ -64,7 +80,7 @@ const HomeScreen = () => {
           <Image
             style={styles.avatarImage}
             source={
-              avatar
+              avatar && typeof avatar === "string"
                 ? { uri: avatar }
                 : require("../../assets/avatars/default_avatar.png")
             }
