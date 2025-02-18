@@ -55,7 +55,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)", // Arkaplanı yarı saydam yapar
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
     width: 300,
@@ -63,8 +63,8 @@ export const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     alignItems: "center",
-    elevation: 5, // Android gölge efekti
-    shadowColor: "#000", // iOS gölge efekti
+    elevation: 5,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -74,5 +74,16 @@ export const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 15,
     color: COLORS.text,
+  },
+  addPostContainer: {
+    height: 50,
+    width: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    right: 0,
+    bottom: 40,
   },
 });

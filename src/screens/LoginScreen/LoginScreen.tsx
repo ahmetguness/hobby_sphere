@@ -54,6 +54,7 @@ const useForm = () => {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -61,7 +62,7 @@ const useForm = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", email: "", password: "" });
+    setFormData({ name: "", email: "", password: "", confirmPassword: "" }); // Reset confirmPassword
   };
 
   return { formData, handleInputChange, resetForm };
@@ -94,8 +95,9 @@ const LoginScreen: React.FC = () => {
   const handleRegister = async () => {
     setIsLogged(true);
 
+    const { email, password, confirmPassword, name } = formData;
+
     try {
-      const { email, password, name } = formData;
       const result = await createUser(email, password, name);
 
       if (result.success && result.user) {
@@ -110,6 +112,11 @@ const LoginScreen: React.FC = () => {
       alert("An error occurred during the registration process.");
     }
 
+    if (password !== confirmPassword) {
+      Alert.alert("Password Mismatch", "Passwords do not match.");
+      setIsLogged(false);
+      return;
+    }
     resetForm();
     setIsLogged(false);
   };
@@ -125,7 +132,10 @@ const LoginScreen: React.FC = () => {
         {isRegisterMode ? (
           <TouchableOpacity
             style={styles.iconContainer}
-            onPress={() => setIsRegisterMode(false)}
+            onPress={() => {
+              setIsRegisterMode(false);
+              resetForm();
+            }}
           >
             <Ionicons name="chevron-back" size={26} color={COLORS.black} />
           </TouchableOpacity>
@@ -151,6 +161,14 @@ const LoginScreen: React.FC = () => {
               value={formData.password}
               secureTextEntry
               onChangeText={(value) => handleInputChange("password", value)}
+            />
+            <TextInputContainer
+              label="Confirm Password"
+              value={formData.confirmPassword}
+              secureTextEntry
+              onChangeText={(value) =>
+                handleInputChange("confirmPassword", value)
+              }
             />
 
             {isLogged ? (
@@ -202,7 +220,10 @@ const LoginScreen: React.FC = () => {
             <View style={styles.buttonContainer}>
               <TextButton
                 label="Register"
-                onPress={() => setIsRegisterMode(true)}
+                onPress={() => {
+                  setIsRegisterMode(true);
+                  resetForm();
+                }}
               />
               <TextButton
                 label="Forgot Password"

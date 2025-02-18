@@ -12,7 +12,7 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
 import { styles } from "./styles";
-import { hobbies } from "../../data/dummy_data";
+import { hobbies, posts } from "../../data/dummy_data";
 import HobbiesCard from "../../components/cards/HobbiesCard";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
@@ -23,6 +23,8 @@ import {
   updateUserImage,
   uploadProfileImage,
 } from "../../services/firebase/firebaseServices";
+import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
+import PostCard from "../../components/cards/PostCard";
 
 const HomeScreen = () => {
   const [searchText, setSearchText] = useState<string>("");
@@ -48,9 +50,23 @@ const HomeScreen = () => {
       setModalVisible(false);
 
       if (user?.id) {
-        const uploadedImageUrl = await uploadProfileImage(user.id, imageUri);
-        if (uploadedImageUrl) {
-          await updateUserImage(user.id, uploadedImageUrl);
+        const uploadResponse = await uploadProfileImage(user.id, imageUri);
+
+        if (uploadResponse.success && uploadResponse.user?.image) {
+          const updateResponse = await updateUserImage(
+            user.id,
+            uploadResponse.user.image
+          );
+
+          if (!updateResponse.success) {
+            console.error(
+              "Failed to update user image:",
+              updateResponse.message
+            );
+          }
+          dispatch(setUserInfo({ ...user, image: uploadResponse.user.image }));
+        } else {
+          console.error("Image upload failed:", uploadResponse.message);
         }
       }
     }
@@ -112,18 +128,35 @@ const HomeScreen = () => {
       </View>
 
       <View style={styles.flatlistContainer}>
-        <FlatList
-          data={hobbies}
-          renderItem={({ item }) => (
-            <HobbiesCard
-              hobbyName={item.name}
-              onPress={() => setSelectedHobby(item.name)}
-            />
-          )}
-          horizontal
-          ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
-          showsHorizontalScrollIndicator={false}
-        />
+        <View style={{ flexDirection: "row" }}>
+          <View
+            style={{
+              marginRight: 10,
+              justifyContent: "center",
+              alignItems: "center",
+              borderWidth: 2,
+              borderRadius: 15,
+              borderColor: COLORS.primary,
+              padding: 10,
+            }}
+          >
+            <Text style={{ color: COLORS.primary, fontWeight: "bold" }}>
+              Trending Topics:
+            </Text>
+          </View>
+          <FlatList
+            data={hobbies}
+            renderItem={({ item }) => (
+              <HobbiesCard
+                hobbyName={item.name}
+                onPress={() => setSelectedHobby(item.name)}
+              />
+            )}
+            horizontal
+            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+            showsHorizontalScrollIndicator={false}
+          />
+        </View>
       </View>
 
       <Modal
@@ -148,6 +181,27 @@ const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+      <View style={{ flex: 1, marginTop: "4%", marginBottom: "10%" }}>
+        <FlatList
+          data={posts}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <PostCard
+              date={item.date}
+              description={item.description}
+              id={item.id}
+              image={item.image}
+              likes={item.likes}
+              topic={item.topic}
+              user={item.user}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        />
+      </View>
+      <TouchableOpacity style={styles.addPostContainer}>
+        <Entypo name="plus" size={30} color={COLORS.secondary} />
+      </TouchableOpacity>
     </View>
   );
 };

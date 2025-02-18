@@ -124,7 +124,7 @@ export const validateUserCredentials = async (
 export const uploadProfileImage = async (
   userId: string,
   uri: string
-): Promise<string | null> => {
+): Promise<dbActionResponse> => {
   try {
     const response = await fetch(uri);
     const blob = await response.blob();
@@ -132,18 +132,31 @@ export const uploadProfileImage = async (
 
     await uploadBytes(imageRef, blob);
     const downloadURL = await getDownloadURL(imageRef);
-    return downloadURL;
+
+    return {
+      success: true,
+      message: "Image uploaded successfully",
+      user: { id: userId, image: downloadURL } as User,
+    };
   } catch (error) {
-    console.error("Image upload failed:", error);
-    return null;
+    return { success: false, message: getErrorMessage(error) };
   }
 };
 
-export const updateUserImage = async (userId: string, imageUrl: string) => {
+export const updateUserImage = async (
+  userId: string,
+  imageUrl: string
+): Promise<dbActionResponse> => {
   try {
     const userRef = doc(db, "users", userId);
     await updateDoc(userRef, { image: imageUrl });
+
+    return {
+      success: true,
+      message: "User image updated successfully",
+      user: { id: userId, image: imageUrl } as User,
+    };
   } catch (error) {
-    console.error("Failed to update user image:", error);
+    return { success: false, message: getErrorMessage(error) };
   }
 };
