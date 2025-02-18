@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import {
 } from "../../services/firebase/firebaseServices";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 import PostCard from "../../components/cards/PostCard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const HomeScreen = () => {
   const [searchText, setSearchText] = useState<string>("");
@@ -88,6 +89,26 @@ const HomeScreen = () => {
     });
     await handleImageSelection(result);
   };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem("user");
+
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+
+          console.log(parsedUser, "here");
+        } else {
+          console.log("No user data found");
+        }
+      } catch (error) {
+        console.error("Error reading value from AsyncStorage", error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <View style={styles.root}>

@@ -44,4 +44,9 @@ export const styles = StyleSheet.create({
     left: 8,
     top: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

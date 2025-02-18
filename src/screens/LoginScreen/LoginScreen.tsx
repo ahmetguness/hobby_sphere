@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
 } from "../../services/firebase/firebaseServices";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Checkbox from "expo-checkbox";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface TextInputContainerProps {
   label: string;
@@ -62,7 +63,7 @@ const useForm = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", email: "", password: "", confirmPassword: "" }); // Reset confirmPassword
+    setFormData({ name: "", email: "", password: "", confirmPassword: "" });
   };
 
   return { formData, handleInputChange, resetForm };
@@ -74,8 +75,21 @@ const LoginScreen: React.FC = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isChecked, setChecked] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const user = await AsyncStorage.getItem("user");
+      if (user) {
+        dispatch(setUserInfo(JSON.parse(user)));
+        navigation.navigate("HomeScreen");
+      }
+      setLoading(false);
+    };
+    checkUser();
+  }, [dispatch, navigation]);
 
   const handleLogin = async () => {
     setIsLogged(true);
@@ -85,6 +99,9 @@ const LoginScreen: React.FC = () => {
     if (result.success && result.user) {
       dispatch(setUserInfo(result.user));
       navigation.navigate("HomeScreen");
+      if (isChecked) {
+        await AsyncStorage.setItem("user", JSON.stringify(result.user));
+      }
     } else {
       Alert.alert("Login Failed", "User information is missing.");
     }
@@ -120,6 +137,14 @@ const LoginScreen: React.FC = () => {
     resetForm();
     setIsLogged(false);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <LinearGradient

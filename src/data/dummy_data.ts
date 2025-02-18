@@ -167,7 +167,7 @@ export const posts: Post[] = [
     topic: "Fitness",
   },
   {
-    id: 10,
+    id: 11,
     image: "",
     user: "Jon Jones",
     likes: 12,
