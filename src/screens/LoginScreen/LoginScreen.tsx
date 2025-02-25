@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -58,9 +58,9 @@ const useForm = () => {
     confirmPassword: "",
   });
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   const resetForm = () => {
     setFormData({ name: "", email: "", password: "", confirmPassword: "" });
@@ -80,15 +80,22 @@ const LoginScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkUser = async () => {
       const user = await AsyncStorage.getItem("user");
-      if (user) {
+      if (isMounted && user) {
         dispatch(setUserInfo(JSON.parse(user)));
         navigation.navigate("HomeScreen");
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
+
     checkUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, [dispatch, navigation]);
 
   const handleLogin = async () => {
@@ -111,8 +118,13 @@ const LoginScreen: React.FC = () => {
 
   const handleRegister = async () => {
     setIsLogged(true);
-
     const { email, password, confirmPassword, name } = formData;
+
+    if (password !== confirmPassword) {
+      Alert.alert("Password Mismatch", "Passwords do not match.");
+      setIsLogged(false);
+      return;
+    }
 
     try {
       const result = await createUser(email, password, name);
@@ -129,11 +141,6 @@ const LoginScreen: React.FC = () => {
       alert("An error occurred during the registration process.");
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Password Mismatch", "Passwords do not match.");
-      setIsLogged(false);
-      return;
-    }
     resetForm();
     setIsLogged(false);
   };
