@@ -17,7 +17,10 @@ import GradientTextButton from "../../components/buttons/GradientTextButton";
 import TextButton from "../../components/buttons/TextButton";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 import { AppDispatch } from "../../hooks/redux/store";
-import { HomeScreenNavigationProp } from "../../types/NavigationTypes";
+import {
+  HomeScreenNavigationProp,
+  LoginScreenNavigationProp,
+} from "../../types/NavigationTypes";
 import {
   createUser,
   validateUserCredentials,
@@ -76,7 +79,7 @@ const LoginScreen: React.FC = () => {
   const [isChecked, setChecked] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
   const [loading, setLoading] = useState(true);
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const navigation = useNavigation<LoginScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
@@ -86,7 +89,7 @@ const LoginScreen: React.FC = () => {
       const user = await AsyncStorage.getItem("user");
       if (isMounted && user) {
         dispatch(setUserInfo(JSON.parse(user)));
-        navigation.navigate("HomeScreen");
+        navigation.navigate("Drawer");
       }
       if (isMounted) setLoading(false);
     };
@@ -105,7 +108,7 @@ const LoginScreen: React.FC = () => {
 
     if (result.success && result.user) {
       dispatch(setUserInfo(result.user));
-      navigation.navigate("HomeScreen");
+      navigation.navigate("Drawer");
       if (isChecked) {
         await AsyncStorage.setItem("user", JSON.stringify(result.user));
       }
@@ -131,7 +134,7 @@ const LoginScreen: React.FC = () => {
 
       if (result.success && result.user) {
         dispatch(setUserInfo(result.user));
-        navigation.navigate("HomeScreen");
+        navigation.navigate("Drawer");
         setIsRegisterMode(false);
       } else {
         alert(result.message);

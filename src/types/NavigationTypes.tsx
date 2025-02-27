@@ -1,10 +1,14 @@
 import { NavigationProp } from "@react-navigation/native";
-import LoginScreen from "../screens/LoginScreen/LoginScreen";
 
 export type RootStackParamList = {
   IntroScreen: undefined;
   LoginScreen: undefined;
+  Drawer: undefined;
+};
+
+export type RootDrawerParamList = {
   HomeScreen: undefined;
+  UserProfileScreen: undefined;
 };
 
 export type IntroScreenNavigationProp = NavigationProp<
@@ -18,6 +22,11 @@ export type LoginScreenNavigationProp = NavigationProp<
 >;
 
 export type HomeScreenNavigationProp = NavigationProp<
-  RootStackParamList,
+  RootDrawerParamList,
   "HomeScreen"
+>;
+
+export type UserProfileScreenNavigationProp = NavigationProp<
+  RootDrawerParamList,
+  "UserProfileScreen"
 >;

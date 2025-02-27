@@ -26,8 +26,11 @@ import {
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 import PostCard from "../../components/cards/PostCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { HomeScreenNavigationProp } from "../../types/NavigationTypes";
 
 const HomeScreen = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [searchText, setSearchText] = useState<string>("");
   const [selectedHobby, setSelectedHobby] = useState<string>("default");
   const user = useSelector((state: RootState) => state.user.userInfo);
@@ -107,7 +110,10 @@ const HomeScreen = () => {
           />
         </TouchableOpacity>
         <Text>HELLO {user.name}</Text>
-        <TouchableOpacity activeOpacity={0.8}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+        >
           <Feather name="menu" size={30} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
