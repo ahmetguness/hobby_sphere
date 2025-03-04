@@ -1,0 +1,52 @@
+Table User {
+  userId String [primary key]
+  email String [unique]
+  hashedPassword String
+  name String
+  image String
+  createdAt datetime
+}
+
+Table Post {
+  postId String [primary key]
+  userId String [ref: > User.userId]
+  subHobbyId String
+  image String
+  description String
+  createdAt datetime
+}
+
+Table Comment {
+  commentId String [primary key]
+  userId String [ref: > User.userId]
+  postId String [ref: > Post.postId]
+  text String
+  createdAt datetime
+}
+
+Table Like {
+  userId String [ref: > User.userId]
+  postId String [ref: > Post.postId]
+  createdAt datetime
+  primary key (userId, postId)
+}
+
+Table Hobby {
+  hobbyId String [primary key]
+  name String [unique]
+}
+
+Table Subhobby {
+  subHobbyId String [primary key]
+  hobbyId String [ref: > Hobby.hobbyId]
+  name String [unique]
+}
+
+
+Table UserHobby {
+  userId String [ref: > User.userId]
+  hobbyId String [ref: > Hobby.hobbyId]
+  primary key (userId, hobbyId)
+}
+
+Ref: Post.subHobbyId > Subhobby.subHobbyId

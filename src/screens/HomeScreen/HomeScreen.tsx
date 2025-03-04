@@ -39,7 +39,6 @@ const HomeScreen = () => {
   const [avatar, setAvatar] = useState<string | null>(
     user.image || require("../../assets/avatars/default_avatar.png")
   );
-  console.log(user);
 
   const handleAvatarPress = () => {
     setModalVisible(true);
