@@ -1,90 +1,202 @@
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Alert,
+} from "react-native";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
 import { styles } from "./styles";
-import { hobbies } from "../../data/dummy_data";
+import { hobbies, posts } from "../../data/dummy_data";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { resetSelectedProfile } from "../../hooks/redux/Slices/ProfileSlice";
+import {
+  resetSelectedProfile,
+  setSelectedProfile,
+} from "../../hooks/redux/Slices/ProfileSlice";
 import { useNavigation } from "@react-navigation/native";
 import { UserProfileScreenNavigationProp } from "../../types/NavigationTypes";
+import ImagePickerComponent from "../../components/ImagePicker/ImagePicker";
+import PostCard from "../../components/cards/PostCard";
+import { COLORS } from "../../theme/colors";
+import {
+  updateUserImage,
+  uploadProfileImage,
+} from "../../services/firebase/firebaseServices";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 
 const UserProfileScreen = () => {
   const profile = useSelector((state: RootState) => state.profile.profileInfo);
+  const user = useSelector((state: RootState) => state.user.userInfo);
   const navigation = useNavigation<UserProfileScreenNavigationProp>();
   const dispatch = useDispatch();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [localProfile, setLocalProfile] = useState(profile);
 
-  const profileImageUri =
-    profile.image && profile.image !== "" ? profile.image : null;
+  const handleImageSelected = async (imageUri: string) => {
+    if (profile?.id && !isUpdating) {
+      setIsUpdating(true);
+      try {
+        const uploadResponse = await uploadProfileImage(profile.id, imageUri);
+
+        if (uploadResponse.success && uploadResponse.user?.image) {
+          const updateResponse = await updateUserImage(
+            profile.id,
+            uploadResponse.user.image
+          );
+
+          if (!updateResponse.success) {
+            throw new Error(updateResponse.message);
+          }
+
+          const updatedProfile = {
+            ...profile,
+            image: uploadResponse.user.image,
+          };
+          const updatedUser = { ...user, image: uploadResponse.user.image };
+
+          dispatch(setSelectedProfile(updatedProfile));
+          dispatch(setUserInfo(updatedUser));
+
+          await AsyncStorage.setItem(
+            "selectedProfile",
+            JSON.stringify(updatedProfile)
+          );
+          await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+          setLocalProfile(updatedProfile);
+        } else {
+          throw new Error(uploadResponse.message);
+        }
+      } catch (error) {
+        console.error("Error updating profile image:", error);
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
+  const handleFollowPress = () => {
+    setIsFollowing(!isFollowing);
+  };
 
   return (
     <View style={styles.root}>
-      <View style={styles.navbarContainer}>
+      <View style={styles.header}>
         <TouchableOpacity
-          style={{ marginBottom: "4%" }}
+          style={styles.backButton}
           onPress={() => {
-            dispatch(resetSelectedProfile()), navigation.goBack();
+            dispatch(resetSelectedProfile());
+            navigation.goBack();
           }}
         >
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.navbarInnerContainer}>
-          <View style={{ flex: 0.4, alignItems: "center" }}>
-            {profileImageUri ? (
-              <Image
-                style={styles.profileImage}
-                source={{ uri: profileImageUri }}
-              />
-            ) : (
-              <Image
-                style={styles.profileImage}
-                source={require("../../assets/avatars/default_avatar.png")}
+        <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity style={styles.settingsButton}>
+          <Ionicons name="settings-outline" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.container}>
+        <View style={styles.profileSection}>
+          <ImagePickerComponent
+            currentImage={profile.image}
+            onImageSelected={handleImageSelected}
+            size={100}
+            disabled={isUpdating}
+          />
+          <View style={styles.userInfo}>
+            <Text style={styles.name}>{profile.name}</Text>
+            <Text style={styles.email}>{profile.email}</Text>
+            <TouchableOpacity
+              style={[
+                styles.followButton,
+                isFollowing && styles.followingButton,
+              ]}
+              onPress={handleFollowPress}
+            >
+              <Text
+                style={[
+                  styles.followButtonText,
+                  isFollowing && styles.followingButtonText,
+                ]}
+              >
+                {isFollowing ? "Following" : "Follow"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>123</Text>
+            <Text style={styles.statLabel}>Posts</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>456</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>789</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Hobbies</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={hobbies.slice(0, 4)}
+            renderItem={({ item }) => (
+              <View style={styles.hobbyItem}>
+                <Ionicons name="heart" size={20} color={COLORS.primary} />
+                <Text style={styles.hobbyText}>{item.name}</Text>
+              </View>
+            )}
+            keyExtractor={(item) => item.name}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Posts</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={posts.slice(0, 3)}
+            renderItem={({ item }) => (
+              <PostCard
+                date={item.date}
+                description={item.description}
+                id={item.id}
+                image={item.image}
+                likes={item.likes}
+                topic={item.topic}
+                user={item.user}
               />
             )}
-            <Text style={{ marginTop: "4%" }}>{profile.name}</Text>
-            <Text>FOLLOW</Text>
-          </View>
-          <View
-            style={{
-              flex: 0.6,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <View style={{ height: 130 }}>
-              <Text>HOBBIES:</Text>
-              <FlatList
-                data={hobbies}
-                renderItem={({ item }) => <Text>{item.name}</Text>}
-              />
-            </View>
-          </View>
+            keyExtractor={(item) =>
+              item.id?.toString() || Math.random().toString()
+            }
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          />
         </View>
-        <View
-          style={{
-            backgroundColor: "orange",
-            flexDirection: "row",
-            justifyContent: "space-evenly",
-          }}
-        >
-          <View style={{ flexDirection: "row" }}>
-            <Text>LIKES</Text>
-            <Text>123</Text>
-          </View>
-          <View style={{ flexDirection: "row" }}>
-            <Text>DISLIKES</Text>
-            <Text>444</Text>
-          </View>
-          <View style={{ flexDirection: "row" }}>
-            <Text>POSTS</Text>
-            <Text>555</Text>
-          </View>
-          <View style={{ flexDirection: "row" }}>
-            <Text>COMMENTS</Text>
-            <Text>66</Text>
-          </View>
-        </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };

@@ -5,9 +5,7 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  Image,
-  Modal,
-  Button,
+  Alert,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
@@ -18,7 +16,6 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
 import { COLORS } from "../../theme/colors";
 import Feather from "@expo/vector-icons/Feather";
-import * as ImagePicker from "expo-image-picker";
 import {
   updateUserImage,
   uploadProfileImage,
@@ -28,6 +25,7 @@ import PostCard from "../../components/cards/PostCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { HomeScreenNavigationProp } from "../../types/NavigationTypes";
+import ImagePickerComponent from "../../components/ImagePicker/ImagePicker";
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -35,24 +33,13 @@ const HomeScreen = () => {
   const [selectedHobby, setSelectedHobby] = useState<string>("default");
   const user = useSelector((state: RootState) => state.user.userInfo);
   const dispatch = useDispatch();
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(
-    user.image || require("../../assets/avatars/default_avatar.png")
-  );
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [localProfile, setLocalProfile] = useState<any>(null);
 
-  const handleAvatarPress = () => {
-    setModalVisible(true);
-  };
-
-  const handleImageSelection = async (
-    result: ImagePicker.ImagePickerResult
-  ) => {
-    if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-      setAvatar(imageUri);
-      setModalVisible(false);
-
-      if (user?.id) {
+  const handleImageSelected = async (imageUri: string) => {
+    if (user?.id && !isUpdating) {
+      setIsUpdating(true);
+      try {
         const uploadResponse = await uploadProfileImage(user.id, imageUri);
 
         if (uploadResponse.success && uploadResponse.user?.image) {
@@ -62,52 +49,35 @@ const HomeScreen = () => {
           );
 
           if (!updateResponse.success) {
-            console.error(
-              "Failed to update user image:",
-              updateResponse.message
-            );
+            throw new Error(updateResponse.message);
           }
 
           const updatedUser = { ...user, image: uploadResponse.user.image };
+
           dispatch(setUserInfo(updatedUser));
+
           await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+          setLocalProfile(updatedUser);
         } else {
-          console.error("Image upload failed:", uploadResponse.message);
+          throw new Error(uploadResponse.message);
         }
+      } catch (error) {
+        console.error("Error updating profile image:", error);
+      } finally {
+        setIsUpdating(false);
       }
     }
-  };
-
-  const pickImageFromGallery = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-    await handleImageSelection(result);
-  };
-
-  const takePhotoWithCamera = async () => {
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    await handleImageSelection(result);
   };
 
   return (
     <View style={styles.root}>
       <View style={styles.navbarContainer}>
-        <TouchableOpacity activeOpacity={0.8} onPress={handleAvatarPress}>
-          <Image
-            style={styles.avatarImage}
-            source={
-              avatar && typeof avatar === "string"
-                ? { uri: avatar }
-                : require("../../assets/avatars/default_avatar.png")
-            }
-          />
-        </TouchableOpacity>
+        <ImagePickerComponent
+          currentImage={user.image}
+          onImageSelected={handleImageSelected}
+          size={40}
+        />
         <Text>HELLO {user.name}</Text>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -168,28 +138,6 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose Profile Photo</Text>
-            <Button
-              title="Select from Gallery"
-              onPress={pickImageFromGallery}
-            />
-            <Button title="Take a Photo" onPress={takePhotoWithCamera} />
-            <Button
-              title="Cancel"
-              color="red"
-              onPress={() => setModalVisible(false)}
-            />
-          </View>
-        </View>
-      </Modal>
       <View style={{ flex: 1, marginTop: "4%", marginBottom: "10%" }}>
         <FlatList
           data={posts}
