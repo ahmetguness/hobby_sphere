@@ -43,6 +43,7 @@ export interface Post {
   date?: string;
   description?: string;
   topic?: string;
+  isHighlighted?: boolean;
 }
 
 export const posts: Post[] = [
@@ -56,6 +57,7 @@ export const posts: Post[] = [
     description:
       "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     topic: "MMA",
+    isHighlighted: true
   },
   {
     id: 1,
@@ -67,6 +69,7 @@ export const posts: Post[] = [
     description:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum.",
     topic: "Nature",
+    isHighlighted: true
   },
   {
     id: 2,
@@ -78,6 +81,7 @@ export const posts: Post[] = [
     description:
       "Donec interdum, nisl id vestibulum scelerisque, ipsum erat pretium nunc, vitae convallis metus elit vitae orci.",
     topic: "Art",
+    isHighlighted: true
   },
   {
     id: 3,
@@ -89,6 +93,7 @@ export const posts: Post[] = [
     description:
       "Curabitur nec tincidunt ligula. Mauris a ante et turpis volutpat laoreet eget ac ante.",
     topic: "Travel",
+    isHighlighted: true
   },
   {
     id: 4,
@@ -100,6 +105,7 @@ export const posts: Post[] = [
     description:
       "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae.",
     topic: "Technology",
+    isHighlighted: true
   },
   {
     id: 5,
@@ -111,6 +117,7 @@ export const posts: Post[] = [
     description:
       "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.",
     topic: "Music",
+    isHighlighted: true
   },
   {
     id: 6,
@@ -122,6 +129,7 @@ export const posts: Post[] = [
     description:
       "Nullam eget dui ut elit tincidunt placerat. Fusce at felis nec ligula scelerisque bibendum.",
     topic: "Photography",
+    isHighlighted: true
   },
   {
     id: 7,
@@ -133,6 +141,7 @@ export const posts: Post[] = [
     description:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus tempor sapien ac urna efficitur, vitae cursus ante efficitur.",
     topic: "Adventure",
+    isHighlighted: true
   },
   {
     id: 8,
@@ -144,6 +153,7 @@ export const posts: Post[] = [
     description:
       "Aliquam erat volutpat. Donec sodales, tortor eget venenatis lacinia, metus odio hendrerit neque, ac faucibus nulla orci eu neque.",
     topic: "Health",
+    isHighlighted: true
   },
   {
     id: 9,
@@ -155,6 +165,7 @@ export const posts: Post[] = [
     description:
       "Maecenas volutpat dui eu felis rhoncus, eu gravida felis euismod. Suspendisse potenti.",
     topic: "Science",
+    isHighlighted: true
   },
   {
     id: 10,
@@ -165,6 +176,7 @@ export const posts: Post[] = [
     description:
       "Sed auctor orci nec velit feugiat auctor. Nulla facilisi. Cras venenatis ante libero, in volutpat ipsum bibendum sit amet.",
     topic: "Fitness",
+    isHighlighted: true
   },
   {
     id: 11,
@@ -175,5 +187,6 @@ export const posts: Post[] = [
     description:
       "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     topic: "MMA",
+    isHighlighted: true
   },
 ];

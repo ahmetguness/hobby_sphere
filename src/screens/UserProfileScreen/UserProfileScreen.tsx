@@ -2,16 +2,13 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
-  Image,
   ScrollView,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
 import { styles } from "./styles";
-import { hobbies, posts } from "../../data/dummy_data";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   resetSelectedProfile,
@@ -20,7 +17,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { UserProfileScreenNavigationProp } from "../../types/NavigationTypes";
 import ImagePickerComponent from "../../components/ImagePicker/ImagePicker";
-import PostCard from "../../components/cards/PostCard";
 import { COLORS } from "../../theme/colors";
 import {
   updateUserImage,
@@ -29,60 +25,168 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 
+interface ProfileHeaderProps {
+  profile: {
+    id: string;
+    name: string;
+    email: string;
+    image: string;
+  };
+  isFollowing: boolean;
+  onFollowPress: () => void;
+  onMessagePress: () => void;
+  isUpdating: boolean;
+  onImageSelected: (uri: string) => void;
+}
+
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+  profile,
+  isFollowing,
+  onFollowPress,
+  onMessagePress,
+  isUpdating,
+  onImageSelected,
+}) => (
+  <View style={styles.profileSection}>
+    <View style={styles.profileHeader}>
+      <ImagePickerComponent
+        currentImage={profile.image}
+        onImageSelected={onImageSelected}
+        size={100}
+        disabled={isUpdating}
+      />
+      <View style={styles.userInfo}>
+        <Text style={styles.name}>{profile.name}</Text>
+        <Text style={styles.email}>{profile.email}</Text>
+        <View style={styles.followButtonContainer}>
+          <TouchableOpacity
+            style={[styles.followButton, isFollowing && styles.followingButton]}
+            onPress={onFollowPress}
+            activeOpacity={0.9}
+          >
+            <Ionicons
+              name={isFollowing ? "checkmark-circle" : "add-circle"}
+              size={20}
+              color={isFollowing ? COLORS.primary : COLORS.white}
+            />
+            <Text
+              style={[
+                styles.followButtonText,
+                isFollowing && styles.followingButtonText,
+              ]}
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={onMessagePress}
+            activeOpacity={0.9}
+          >
+            <Ionicons
+              name="chatbubble-ellipses"
+              size={20}
+              color={COLORS.white}
+            />
+            <Text style={styles.messageButtonText}>Message</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </View>
+);
+
+const StatsSection = () => (
+  <View style={styles.statsContainer}>
+    <View style={styles.statItem}>
+      <View style={styles.statContent}>
+        <Ionicons
+          name="document-text-outline"
+          size={24}
+          color={COLORS.primary}
+        />
+        <View style={styles.statTextContainer}>
+          <Text style={styles.statValue}>123</Text>
+          <Text style={styles.statLabel}>Posts</Text>
+        </View>
+      </View>
+    </View>
+    <View style={styles.statItem}>
+      <View style={styles.statContent}>
+        <Ionicons name="people-outline" size={24} color={COLORS.primary} />
+        <View style={styles.statTextContainer}>
+          <Text style={styles.statValue}>456</Text>
+          <Text style={styles.statLabel}>Followers</Text>
+        </View>
+      </View>
+    </View>
+    <View style={styles.statItem}>
+      <View style={styles.statContent}>
+        <Ionicons name="person-add-outline" size={24} color={COLORS.primary} />
+        <View style={styles.statTextContainer}>
+          <Text style={styles.statValue}>789</Text>
+          <Text style={styles.statLabel}>Following</Text>
+        </View>
+      </View>
+    </View>
+  </View>
+);
+
 const UserProfileScreen = () => {
   const profile = useSelector((state: RootState) => state.profile.profileInfo);
   const user = useSelector((state: RootState) => state.user.userInfo);
-  const navigation = useNavigation<UserProfileScreenNavigationProp>();
   const dispatch = useDispatch();
+  const navigation = useNavigation<UserProfileScreenNavigationProp>();
+
   const [isFollowing, setIsFollowing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [localProfile, setLocalProfile] = useState(profile);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleImageSelected = async (imageUri: string) => {
-    if (profile?.id && !isUpdating) {
-      setIsUpdating(true);
-      try {
-        const uploadResponse = await uploadProfileImage(profile.id, imageUri);
-
-        if (uploadResponse.success && uploadResponse.user?.image) {
-          const updateResponse = await updateUserImage(
-            profile.id,
-            uploadResponse.user.image
-          );
-
-          if (!updateResponse.success) {
-            throw new Error(updateResponse.message);
-          }
-
-          const updatedProfile = {
-            ...profile,
-            image: uploadResponse.user.image,
-          };
-          const updatedUser = { ...user, image: uploadResponse.user.image };
-
-          dispatch(setSelectedProfile(updatedProfile));
-          dispatch(setUserInfo(updatedUser));
-
-          await AsyncStorage.setItem(
-            "selectedProfile",
-            JSON.stringify(updatedProfile)
-          );
-          await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-
-          setLocalProfile(updatedProfile);
-        } else {
-          throw new Error(uploadResponse.message);
-        }
-      } catch (error) {
-        console.error("Error updating profile image:", error);
-      } finally {
-        setIsUpdating(false);
+    if (!profile?.id || isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const uploadResponse = await uploadProfileImage(profile.id, imageUri);
+      if (!uploadResponse.success || !uploadResponse.user?.image) {
+        throw new Error(uploadResponse.message);
       }
+
+      const updateResponse = await updateUserImage(
+        profile.id,
+        uploadResponse.user.image
+      );
+      if (!updateResponse.success) {
+        throw new Error(updateResponse.message);
+      }
+
+      const updatedProfile = { ...profile, image: uploadResponse.user.image };
+      const updatedUser = { ...user, image: uploadResponse.user.image };
+
+      dispatch(setSelectedProfile(updatedProfile));
+      dispatch(setUserInfo(updatedUser));
+
+      await AsyncStorage.setItem(
+        "selectedProfile",
+        JSON.stringify(updatedProfile)
+      );
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error("Error updating profile image:", error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleFollowPress = () => {
-    setIsFollowing(!isFollowing);
+  const handleFollowPress = () => setIsFollowing(!isFollowing);
+  const handleMessagePress = () => {};
+  const handleBackPress = () => {
+    dispatch(resetSelectedProfile());
+    navigation.goBack();
+  };
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setRefreshing(false);
   };
 
   return (
@@ -90,112 +194,28 @@ const UserProfileScreen = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => {
-            dispatch(resetSelectedProfile());
-            navigation.goBack();
-          }}
+          onPress={handleBackPress}
+          activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={COLORS.darkText} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container}>
-        <View style={styles.profileSection}>
-          <ImagePickerComponent
-            currentImage={profile.image}
-            onImageSelected={handleImageSelected}
-            size={100}
-            disabled={isUpdating}
-          />
-          <View style={styles.userInfo}>
-            <Text style={styles.name}>{profile.name}</Text>
-            <Text style={styles.email}>{profile.email}</Text>
-            <TouchableOpacity
-              style={[
-                styles.followButton,
-                isFollowing && styles.followingButton,
-              ]}
-              onPress={handleFollowPress}
-            >
-              <Text
-                style={[
-                  styles.followButtonText,
-                  isFollowing && styles.followingButtonText,
-                ]}
-              >
-                {isFollowing ? "Following" : "Follow"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>123</Text>
-            <Text style={styles.statLabel}>Posts</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>456</Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>789</Text>
-            <Text style={styles.statLabel}>Following</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hobbies</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={hobbies.slice(0, 4)}
-            renderItem={({ item }) => (
-              <View style={styles.hobbyItem}>
-                <Ionicons name="heart" size={20} color={COLORS.primary} />
-                <Text style={styles.hobbyText}>{item.name}</Text>
-              </View>
-            )}
-            keyExtractor={(item) => item.name}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Posts</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={posts.slice(0, 3)}
-            renderItem={({ item }) => (
-              <PostCard
-                date={item.date}
-                description={item.description}
-                id={item.id}
-                image={item.image}
-                likes={item.likes}
-                topic={item.topic}
-                user={item.user}
-              />
-            )}
-            keyExtractor={(item) =>
-              item.id?.toString() || Math.random().toString()
-            }
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-          />
-        </View>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        <ProfileHeader
+          profile={profile}
+          isFollowing={isFollowing}
+          onFollowPress={handleFollowPress}
+          onMessagePress={handleMessagePress}
+          isUpdating={isUpdating}
+          onImageSelected={handleImageSelected}
+        />
+        <StatsSection />
       </ScrollView>
     </View>
   );

@@ -45,7 +45,7 @@ const ImagePickerComponent: React.FC<ImagePickerProps> = ({
 
   const pickImageFromGallery = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
     });
@@ -54,6 +54,7 @@ const ImagePickerComponent: React.FC<ImagePickerProps> = ({
 
   const takePhotoWithCamera = async () => {
     let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
     });
