@@ -10,6 +10,7 @@ import { COLORS } from "../../theme/colors";
 import {
   updateUserImage,
   uploadProfileImage,
+  createPost,
 } from "../../services/firebase/firebaseServices";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -67,8 +68,28 @@ const HomeScreen = () => {
     setPostImage(imageUri);
   };
 
-  const handleCreatePost = () => {
-    setIsModalVisible(false);
+  const handleCreatePost = async () => {
+    if (!user?.id || !postDescription || !postHobby) return;
+
+    try {
+      const response = await createPost(
+        user.id,
+        postDescription,
+        postImage,
+        postHobby
+      );
+
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+
+      setIsModalVisible(false);
+      setPostDescription("");
+      setPostImage("");
+      setPostHobby("");
+    } catch (error) {
+      console.error("Error creating post:", error);
+    }
   };
 
   const handleOpenDrawer = () => {
@@ -136,6 +157,7 @@ const HomeScreen = () => {
         setPostHobby={setPostHobby}
         onPost={handleCreatePost}
         onImageSelect={handlePostImageSelected}
+        selectedImage={postImage}
       />
     </View>
   );

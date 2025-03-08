@@ -2,10 +2,11 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection } from "firebase/firestore";
 import { auth, db, storage } from "./firebaseConfig";
 import { FirebaseError } from "firebase/app";
 import { User } from "../../models/User";
+import { Post } from "../../models/db_models/Post";
 import { dbActionResponse } from "../../models/ServiceModels";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
@@ -155,6 +156,46 @@ export const updateUserImage = async (
       success: true,
       message: "User image updated successfully",
       user: { id: userId, image: imageUrl } as User,
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const createPost = async (
+  userId: string,
+  description: string,
+  imageUri: string,
+  hobbyId: string
+): Promise<dbActionResponse> => {
+  try {
+    let imageUrl = "";
+    
+    if (imageUri) {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      const imageRef = ref(storage, `posts/${Date.now()}_${userId}.jpg`);
+      await uploadBytes(imageRef, blob);
+      imageUrl = await getDownloadURL(imageRef);
+    }
+
+    const post: Post = {
+      postId: Date.now().toString(),
+      userId,
+      description,
+      image: imageUrl,
+      subHobbyId: hobbyId,
+      createdAt: new Date(),
+      isHighlited: false,
+    };
+
+    const postsRef = collection(db, "posts");
+    await setDoc(doc(postsRef, post.postId), post);
+
+    return {
+      success: true,
+      message: "Post created successfully",
+      post,
     };
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };
