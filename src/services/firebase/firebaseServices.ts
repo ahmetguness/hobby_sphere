@@ -2,7 +2,23 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, collection } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  Query,
+  limit,
+  Timestamp,
+  arrayRemove,
+  arrayUnion,
+  deleteDoc,
+} from "firebase/firestore";
 import { auth, db, storage } from "./firebaseConfig";
 import { FirebaseError } from "firebase/app";
 import { User } from "../../models/User";
@@ -170,7 +186,7 @@ export const createPost = async (
 ): Promise<dbActionResponse> => {
   try {
     let imageUrl = "";
-    
+
     if (imageUri) {
       const response = await fetch(imageUri);
       const blob = await response.blob();
@@ -187,6 +203,9 @@ export const createPost = async (
       subHobbyId: hobbyId,
       createdAt: new Date(),
       isHighlited: false,
+      likes: [],
+      dislikes: [],
+      commentsCount: 0,
     };
 
     const postsRef = collection(db, "posts");
@@ -196,6 +215,283 @@ export const createPost = async (
       success: true,
       message: "Post created successfully",
       post,
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+interface GetPostsOptions {
+  userId?: string;
+  hobbyId?: string;
+  limit?: number;
+  isHighlighted?: boolean;
+}
+
+export const getPosts = async (
+  options?: GetPostsOptions
+): Promise<dbActionResponse> => {
+  try {
+    const postsRef = collection(db, "posts");
+    let postsQuery: Query = postsRef;
+
+    if (options) {
+      if (options.userId) {
+        postsQuery = query(postsQuery, where("userId", "==", options.userId));
+      }
+      if (options.hobbyId) {
+        postsQuery = query(
+          postsQuery,
+          where("subHobbyId", "==", options.hobbyId)
+        );
+      }
+      if (options.isHighlighted !== undefined) {
+        postsQuery = query(
+          postsQuery,
+          where("isHighlited", "==", options.isHighlighted)
+        );
+      }
+      if (options.limit) {
+        postsQuery = query(postsQuery, limit(options.limit));
+      }
+    }
+
+    postsQuery = query(postsQuery, orderBy("createdAt", "desc"));
+
+    const querySnapshot = await getDocs(postsQuery);
+    const posts: Post[] = [];
+
+    for (const doc of querySnapshot.docs) {
+      const postData = doc.data();
+
+      posts.push({
+        ...postData,
+        createdAt: (postData.createdAt as Timestamp).toDate(),
+      } as Post);
+    }
+
+    return {
+      success: true,
+      message: "Posts fetched successfully",
+      posts,
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+interface PostInteraction {
+  userId: string;
+  type: "like" | "dislike";
+  createdAt: Date;
+}
+
+interface Comment {
+  commentId: string;
+  userId: string;
+  postId: string;
+  text: string;
+  createdAt: Date;
+  likes: string[];
+  dislikes: string[];
+}
+
+export const togglePostLike = async (
+  postId: string,
+  userId: string,
+  currentLikeState: boolean
+): Promise<dbActionResponse> => {
+  try {
+    const postRef = doc(db, "posts", postId);
+    const interactionRef = doc(db, `posts/${postId}/interactions/${userId}`);
+
+    const interactionDoc = await getDoc(interactionRef);
+
+    if (currentLikeState) {
+      await updateDoc(postRef, {
+        likes: arrayRemove(userId),
+      });
+      if (interactionDoc.exists()) {
+        await deleteDoc(interactionRef);
+      }
+    } else {
+      await updateDoc(postRef, {
+        likes: arrayUnion(userId),
+        dislikes: arrayRemove(userId),
+      });
+
+      const interaction: PostInteraction = {
+        userId,
+        type: "like",
+        createdAt: new Date(),
+      };
+
+      await setDoc(interactionRef, interaction);
+    }
+
+    return {
+      success: true,
+      message: currentLikeState ? "Post unliked" : "Post liked",
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const togglePostDislike = async (
+  postId: string,
+  userId: string,
+  currentDislikeState: boolean
+): Promise<dbActionResponse> => {
+  try {
+    const postRef = doc(db, "posts", postId);
+    const interactionRef = doc(db, `posts/${postId}/interactions/${userId}`);
+
+    const interactionDoc = await getDoc(interactionRef);
+
+    if (currentDislikeState) {
+      await updateDoc(postRef, {
+        dislikes: arrayRemove(userId),
+      });
+      if (interactionDoc.exists()) {
+        await deleteDoc(interactionRef);
+      }
+    } else {
+      await updateDoc(postRef, {
+        dislikes: arrayUnion(userId),
+        likes: arrayRemove(userId),
+      });
+
+      const interaction: PostInteraction = {
+        userId,
+        type: "dislike",
+        createdAt: new Date(),
+      };
+
+      await setDoc(interactionRef, interaction);
+    }
+
+    return {
+      success: true,
+      message: currentDislikeState ? "Post undisliked" : "Post disliked",
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const addComment = async (
+  postId: string,
+  userId: string,
+  text: string
+): Promise<dbActionResponse> => {
+  try {
+    const commentsRef = collection(db, `posts/${postId}/comments`);
+
+    const comment: Comment = {
+      commentId: Date.now().toString(),
+      userId,
+      postId,
+      text,
+      createdAt: new Date(),
+      likes: [],
+      dislikes: [],
+    };
+
+    await setDoc(doc(commentsRef, comment.commentId), comment);
+
+    return {
+      success: true,
+      message: "Comment added successfully",
+      comment,
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const getPostComments = async (
+  postId: string
+): Promise<dbActionResponse> => {
+  try {
+    const commentsRef = collection(db, `posts/${postId}/comments`);
+    const q = query(commentsRef, orderBy("createdAt", "desc"));
+
+    const querySnapshot = await getDocs(q);
+    const comments: Comment[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const commentData = doc.data();
+      comments.push({
+        ...commentData,
+        createdAt: (commentData.createdAt as Timestamp).toDate(),
+        likes: commentData.likes || [],
+        dislikes: commentData.dislikes || [],
+      } as Comment);
+    });
+
+    return {
+      success: true,
+      message: "Comments fetched successfully",
+      comments,
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const toggleCommentLike = async (
+  postId: string,
+  commentId: string,
+  userId: string,
+  currentLikeState: boolean
+): Promise<dbActionResponse> => {
+  try {
+    const commentRef = doc(db, `posts/${postId}/comments/${commentId}`);
+
+    if (currentLikeState) {
+      await updateDoc(commentRef, {
+        likes: arrayRemove(userId),
+      });
+    } else {
+      await updateDoc(commentRef, {
+        likes: arrayUnion(userId),
+        dislikes: arrayRemove(userId),
+      });
+    }
+
+    return {
+      success: true,
+      message: currentLikeState ? "Comment unliked" : "Comment liked",
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error) };
+  }
+};
+
+export const toggleCommentDislike = async (
+  postId: string,
+  commentId: string,
+  userId: string,
+  currentDislikeState: boolean
+): Promise<dbActionResponse> => {
+  try {
+    const commentRef = doc(db, `posts/${postId}/comments/${commentId}`);
+
+    if (currentDislikeState) {
+      await updateDoc(commentRef, {
+        dislikes: arrayRemove(userId),
+      });
+    } else {
+      await updateDoc(commentRef, {
+        dislikes: arrayUnion(userId),
+        likes: arrayRemove(userId),
+      });
+    }
+
+    return {
+      success: true,
+      message: currentDislikeState ? "Comment undisliked" : "Comment disliked",
     };
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };

@@ -1,9 +1,15 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../hooks/redux/store";
 import { styles } from "./styles";
-import { hobbies, posts } from "../../data/dummy_data";
+import { hobbies } from "../../data/dummy_data";
 import PostCard from "../../components/cards/PostCard";
 import ImagePickerComponent from "../../components/ImagePicker/ImagePicker";
 import { COLORS } from "../../theme/colors";
@@ -11,6 +17,7 @@ import {
   updateUserImage,
   uploadProfileImage,
   createPost,
+  getPosts,
 } from "../../services/firebase/firebaseServices";
 import { setUserInfo } from "../../hooks/redux/Slices/UserSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +27,7 @@ import { Icons } from "../../components/home/Icons";
 import { CreatePostModal } from "../../components/home/CreatePostModal";
 import { SearchBar } from "../../components/home/SearchBar";
 import { TrendingTopics } from "../../components/home/TrendingTopics";
+import { Post } from "../../models/db_models/Post";
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -34,6 +42,43 @@ const HomeScreen = () => {
   const [postHobby, setPostHobby] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [localProfile, setLocalProfile] = useState<any>(null);
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPosts = async (hobbyId?: string) => {
+    setIsLoading(true);
+    try {
+      const options = {
+        hobbyId: hobbyId !== "default" ? hobbyId : undefined,
+        limit: 20,
+      };
+
+      const response = await getPosts(options);
+      if (response.success && response.posts) {
+        setPosts(response.posts);
+      }
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts(selectedHobby);
+  }, [selectedHobby]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchPosts(selectedHobby);
+  };
+
+  const handleHobbySelect = (hobby: string) => {
+    setSelectedHobby(hobby);
+  };
 
   const handleImageSelected = async (imageUri: string) => {
     if (!user?.id || isUpdating) return;
@@ -87,6 +132,7 @@ const HomeScreen = () => {
       setPostDescription("");
       setPostImage("");
       setPostHobby("");
+      fetchPosts(selectedHobby);
     } catch (error) {
       console.error("Error creating post:", error);
     }
@@ -95,6 +141,12 @@ const HomeScreen = () => {
   const handleOpenDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
+
+  const renderEmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>No posts found</Text>
+    </View>
+  );
 
   return (
     <View style={styles.root}>
@@ -119,26 +171,36 @@ const HomeScreen = () => {
       <TrendingTopics
         hobbies={hobbies}
         selectedHobby={selectedHobby}
-        onHobbySelect={setSelectedHobby}
+        onHobbySelect={handleHobbySelect}
       />
 
       <View style={styles.postsContainer}>
-        <FlatList
-          data={posts}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <PostCard
-              date={item.date}
-              description={item.description}
-              id={item.id}
-              image={item.image}
-              likes={item.likes}
-              topic={item.topic}
-              user={item.user}
-            />
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        />
+        {isLoading && !refreshing ? (
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        ) : (
+          <FlatList
+            data={posts}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <PostCard
+                id={item.postId}
+                date={item.createdAt}
+                description={item.description}
+                image={item.image}
+                likes={item.likes || []}
+                dislikes={item.dislikes || []}
+                topic={item.subHobbyId}
+                user={user}
+                currentUser={user}
+              />
+            )}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            ListEmptyComponent={renderEmptyComponent}
+            contentContainerStyle={styles.postsContent}
+          />
+        )}
       </View>
 
       <TouchableOpacity

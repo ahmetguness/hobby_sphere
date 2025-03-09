@@ -200,7 +200,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.postButton,
-                isPosting && styles.postButtonDisabled
+                isPosting && styles.postButtonDisabled,
               ]}
               onPress={handlePost}
               activeOpacity={0.8}
